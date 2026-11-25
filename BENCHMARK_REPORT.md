@@ -3,7 +3,7 @@
 > Mọi con số trong báo cáo lấy từ các file JSON/CSV trong `reports/` và `benchmark-results/`, không ước lượng.
 > Tất cả các phần (1-7) đã điền. Log thô của các thí nghiệm nằm trong `reports/alert_experiments.log` và `reports/phase_c_traces.log`.
 
-**Họ tên:** Nguyen Tran Tien (MSSV 2A202603504)
+**Họ tên:** Nguyễn Trần Tiến (MSSV 2A202603504)
 **Ngày chạy:** 2026-11-25
 **Môi trường:** Windows 11 Home, Intel Core i5-12450H (12 luồng), WSL2 Ubuntu được cấp 7.8 GB RAM, Python 3.11.18, Docker Desktop 4.100 (WSL2). Agent (1 tiến trình uvicorn) và công cụ sinh tải `load_test.py` chạy **chung một máy** nên kết quả ở mức concurrency cao có thể bị ảnh hưởng bởi chính máy sinh tải.
 
