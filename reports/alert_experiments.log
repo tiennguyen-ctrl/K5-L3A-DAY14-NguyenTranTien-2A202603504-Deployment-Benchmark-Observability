@@ -1,0 +1,86 @@
+################ BASELINE (17:25:50) ################
+Locust nền: 10 user. Chờ 90s cho metric ổn định...
+alert baseline: (none)
+
+################ A: MOCK_ERROR_RATE=0.2 (17:27:22) ################
+ Container k5-day14-observability-grafana-1 Running   Container k5-day14-observability-jaeger-1 Running   Container k5-day14-observability-locust-1 Running   Container k5-day14-observability-nginx-1 Running   Container k5-day14-observability-prometheus-1 Running   Container k5-day14-observability-agent-1 Recreate   Container k5-day14-observability-agent-2 Recreate   Container k5-day14-observability-agent-2 Recreated   Container k5-day14-observability-agent-1 Recreated   Container k5-day14-observability-agent-1 Started   Container k5-day14-observability-agent-2 Started  
+   AgentHighErrorRate PENDING sau 27s
+   >>> AgentHighErrorRate FIRING sau 88s (kể từ lúc thay đổi)
+RESULT A firing=88 pending=27
+   alert lúc này: AgentHighErrorRate=firing
+   --- trace lỗi trong Jaeger (tag error=true) ---
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+    d=json.load(sys.stdin).get('data') or []
+      ~~~~~~~~~^^^^^^^^^^^
+  File "/usr/lib/python3.14/json/__init__.py", line 298, in load
+    return loads(fp.read(),
+        cls=cls, object_hook=object_hook,
+        parse_float=parse_float, parse_int=parse_int,
+        parse_constant=parse_constant, object_pairs_hook=object_pairs_hook, **kw)
+  File "/usr/lib/python3.14/json/__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/usr/lib/python3.14/json/decoder.py", line 348, in decode
+    raise JSONDecodeError("Extra data", s, end)
+json.decoder.JSONDecodeError: Extra data: line 1 column 5 (char 4)
+   --- dòng log llm_error đầu tiên ---
+{"ts": "2026-11-25T10:28:48.800127+00:00", "level": "INFO", "service": "observable-agent", "instance": "c3cdc0e22cf7", "event": "llm_error", "trace_id": "7b6bbbf8de1a07e21ee9e23534f3b00b", "span_id": "3a0450d718fe5821", "request_id": "976fc080b8b1", "error": "Upstream LLM error: 503 Service Unavailable (mock)"}
+[17:28:50] RESET về cấu hình mặc định
+[17:29:38] alert sạch sau 8x5s
+
+################ D: docker pause 1 instance (17:29:38) ################
+pause /k5-day14-observability-agent-1
+   AgentInstanceDown PENDING sau 11s
+   >>> AgentInstanceDown FIRING sau 41s (kể từ lúc thay đổi)
+RESULT D firing=41 pending=11
+   alert lúc này: AgentInstanceDown=firing
+   Locust: lỗi nginx 504/502 trong lúc pause? (xem log nginx)
+sed: -e expression #1, char 36: unknown option to `s'
+[17:30:19] RESET về cấu hình mặc định
+[17:30:25] alert sạch sau 2x5s
+
+################ E: AGENT_VERSION=v1 (17:30:25) ################
+ Container k5-day14-observability-nginx-1 Running   Container k5-day14-observability-prometheus-1 Running   Container k5-day14-observability-grafana-1 Running   Container k5-day14-observability-jaeger-1 Running   Container k5-day14-observability-locust-1 Running   Container k5-day14-observability-agent-2 Recreate   Container k5-day14-observability-agent-1 Recreate   Container k5-day14-observability-agent-2 Recreated   Container k5-day14-observability-agent-1 Recreated   Container k5-day14-observability-agent-1 Started   Container k5-day14-observability-agent-2 Started  
+   sau 150s, alert: (none)
+   agent_info: ['v1', 'v1']
+RESULT E: không có alert firing = yes
+[17:32:57] RESET về cấu hình mặc định
+[17:33:12] alert sạch sau 1x5s
+
+################ B: MOCK_SLOW_RATE=0.3 (17:33:12) ################
+ Container k5-day14-observability-nginx-1 Running   Container k5-day14-observability-prometheus-1 Running   Container k5-day14-observability-grafana-1 Running   Container k5-day14-observability-jaeger-1 Running   Container k5-day14-observability-locust-1 Running   Container k5-day14-observability-agent-1 Recreate   Container k5-day14-observability-agent-2 Recreate   Container k5-day14-observability-agent-1 Recreated   Container k5-day14-observability-agent-2 Recreated   Container k5-day14-observability-agent-1 Started   Container k5-day14-observability-agent-2 Started  
+   AgentHighLatencyP95 PENDING sau 27s
+   >>> AgentHighLatencyP95 FIRING sau 149s (kể từ lúc thay đổi)
+RESULT B firing=149 pending=27
+   alert lúc này: AgentHighLatencyP95=firing
+   --- trace chậm trong Jaeger (>=1s) ---
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+    d=json.load(sys.stdin).get('data') or []
+      ~~~~~~~~~^^^^^^^^^^^
+  File "/usr/lib/python3.14/json/__init__.py", line 298, in load
+    return loads(fp.read(),
+        cls=cls, object_hook=object_hook,
+        parse_float=parse_float, parse_int=parse_int,
+        parse_constant=parse_constant, object_pairs_hook=object_pairs_hook, **kw)
+  File "/usr/lib/python3.14/json/__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "/usr/lib/python3.14/json/decoder.py", line 348, in decode
+    raise JSONDecodeError("Extra data", s, end)
+json.decoder.JSONDecodeError: Extra data: line 1 column 5 (char 4)
+[17:35:41] RESET về cấu hình mặc định
+[17:36:36] alert sạch sau 9x5s
+
+################ C: LLM_MODEL=mock-llm-large (17:36:36) ################
+ Container k5-day14-observability-jaeger-1 Running   Container k5-day14-observability-locust-1 Running   Container k5-day14-observability-nginx-1 Running   Container k5-day14-observability-prometheus-1 Running   Container k5-day14-observability-grafana-1 Running   Container k5-day14-observability-agent-1 Recreate   Container k5-day14-observability-agent-2 Recreate   Container k5-day14-observability-agent-2 Recreated   Container k5-day14-observability-agent-1 Recreated   Container k5-day14-observability-agent-1 Started   Container k5-day14-observability-agent-2 Started  
+   LLMCostBurnRateHigh PENDING sau 62s
+   >>> LLMCostBurnRateHigh FIRING sau 184s (kể từ lúc thay đổi)
+RESULT C firing=184 pending=62
+   alert lúc này: LLMCostBurnRateHigh=firing
+   cost $/giờ: 6.41
+[17:39:40] RESET về cấu hình mặc định
+[17:44:10] alert sạch sau 52x5s
+
+################ XONG (17:44:10) ################

@@ -69,5 +69,6 @@ Kết quả 4 lệnh tự kiểm (chỉ in mã HTTP):
 ## Screenshots
 
 - [Deployment dashboard](screenshots/dashboard.png)
+- [Services overview (ai-agent Deployed, agent-redis Available)](screenshots/overview.png)
 - [Service running](screenshots/running.png)
 - [Test results](screenshots/test.png)

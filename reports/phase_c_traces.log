@@ -1,0 +1,47 @@
+[20:21:52] dựng lại toàn bộ stack (cấu hình mặc định, 2 agent)
+ Container k5-day14-observability-agent-2 Recreate   Container k5-day14-observability-agent-1 Recreate   Container k5-day14-observability-agent-1 Recreated   Container k5-day14-observability-agent-2 Recreated   Container k5-day14-observability-jaeger-1 Started   Container k5-day14-observability-prometheus-1 Started   Container k5-day14-observability-agent-1 Started   Container k5-day14-observability-grafana-1 Started   Container k5-day14-observability-agent-2 Started   Container k5-day14-observability-nginx-1 Started   Container k5-day14-observability-locust-1 Started  
+[20:22:08] GATE OK (/ask=200, 2 target up)
+[20:22:10] Locust nền 10 user đã chạy; chờ 75s cho metric ổn định...
+alert trước khi phá: (none)
+[20:23:25] ---- chạy Pha C ----
+[20:23:25] PHA C: MOCK_ERROR_RATE=0.2 + MOCK_SLOW_RATE=0.3 (UTC 2026-11-25T13:23:25Z)
+[20:25:50] CẢ HAI FIRING sau 145s: AgentHighErrorRate=firing AgentHighLatencyP95=firing
+alert hiện tại: AgentHighErrorRate=firing AgentHighLatencyP95=firing
+đợi thêm 40s để có nhiều trace chậm/lỗi và log...
+
+=== TRACE CHẬM MỚI NHẤT (2026-11-25T13:23:25Z → 2026-11-25T13:27:30Z) ===
+   300 trace trong khung 2026-11-25T13:23:25Z → 2026-11-25T13:27:30Z
+   trace_id = 2f467a0af7a9f0f97e71cd64466c5139
+   tổng thời gian = 1720.5 ms, số span = 4
+      POST /ask                           1720.5 ms  (100.0% của span gốc)
+         attrs: {'http.route': '/ask', 'http.status_code': '200'}
+      agent.run                           1716.6 ms  ( 99.8% của span gốc)
+         attrs: {'agent.version': 'v2'}
+      chat mock-llm-small                 1696.5 ms  ( 98.6% của span gốc)
+         attrs: {'gen_ai.operation.name': 'chat', 'gen_ai.provider.name': 'mock', 'gen_ai.request.model': 'mock-llm-small', 'gen_ai.usage.input_tokens': '95', 'gen_ai.usage.output_tokens': '55'}
+      agent.retrieve_context                19.6 ms  (  1.1% của span gốc)
+   (phân bố tổng thời gian: p50=197 ms, max=1720 ms, số trace >1s = 68)
+--- log JSON có trace_id=2f467a0af7a9f0f97e71cd64466c5139 ---
+{"ts": "2026-11-25T13:25:32.559693+00:00", "level": "INFO", "service": "observable-agent", "instance": "e484495ae17d", "event": "llm_call", "trace_id": "2f467a0af7a9f0f97e71cd64466c5139", "span_id": "b984a3830187fbc7", "request_id": "2f26128e9839", "model": "mock-llm-small", "agent_version": "v2", "input_tokens": 95, "output_tokens": 55, "cost_usd": 4.7e-05, "llm_ms": 1695.9}
+{"ts": "2026-11-25T13:25:32.560374+00:00", "level": "INFO", "service": "observable-agent", "instance": "e484495ae17d", "event": "http_request", "trace_id": "2f467a0af7a9f0f97e71cd64466c5139", "span_id": "b984a3830187fbc7", "request_id": "2f26128e9839", "method": "POST", "route": "/ask", "status": 200, "ms": 1719.2}
+
+=== TRACE LỖI MỚI (2026-11-25T13:23:25Z → 2026-11-25T13:27:30Z) ===
+   300 trace trong khung 2026-11-25T13:23:25Z → 2026-11-25T13:27:30Z
+   số trace có lỗi/exception: 72 / 300
+   trace_id = 6852b424fe0aada4b9608531f26eb33d
+   tổng thời gian = 875.7 ms, số span = 4
+      POST /ask                            875.7 ms  (100.0% của span gốc) [ERROR]
+         attrs: {'http.route': '/ask', 'http.status_code': '503'}
+      agent.run                            855.1 ms  ( 97.6% của span gốc) [ERROR]
+         event: exception
+         attrs: {'agent.version': 'v2'}
+      chat mock-llm-small                  833.2 ms  ( 95.1% của span gốc) [ERROR]
+         event: exception
+         attrs: {'gen_ai.operation.name': 'chat', 'gen_ai.provider.name': 'mock', 'gen_ai.request.model': 'mock-llm-small'}
+      agent.retrieve_context                21.4 ms  (  2.4% của span gốc)
+--- log JSON có trace_id=6852b424fe0aada4b9608531f26eb33d ---
+{"ts": "2026-11-25T13:25:54.737414+00:00", "level": "INFO", "service": "observable-agent", "instance": "e484495ae17d", "event": "llm_error", "trace_id": "6852b424fe0aada4b9608531f26eb33d", "span_id": "605a30e7ec61d9ef", "request_id": "c57f52d8fc0a", "error": "Upstream LLM error: 503 Service Unavailable (mock)"}
+{"ts": "2026-11-25T13:25:54.737706+00:00", "level": "INFO", "service": "observable-agent", "instance": "e484495ae17d", "event": "http_request", "trace_id": "6852b424fe0aada4b9608531f26eb33d", "span_id": "605a30e7ec61d9ef", "request_id": "c57f52d8fc0a", "method": "POST", "route": "/ask", "status": 503, "ms": 875.1}
+
+[20:26:30] TRẠNG THÁI GIỮ NGUYÊN CHO BẠN CHỤP ẢNH. alert: AgentHighErrorRate=firing AgentHighLatencyP95=firing
+[20:26:30] PHA C XONG
