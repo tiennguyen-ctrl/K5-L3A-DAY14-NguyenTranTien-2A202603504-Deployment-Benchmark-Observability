@@ -369,7 +369,46 @@ Nginx thử sang instance khác khi gặp instance đã tắt, và session vẫn
 - State trong RAM hỏng khi chạy nhiều instance vì mỗi instance có bộ nhớ riêng; request kế tiếp có thể đến instance không có state đó.
 - Đã chạy `docker compose -p k5-day14-scaling up -d --build --scale agent=3`, `python3 test_stateless.py` và giải thích kết quả như trên.
 
-<!-- Part 3 (Cloud Deployment) sẽ được bổ sung ở CP6 sau khi deploy agent Part 6 -->
+## Part 3: Cloud Deployment
+
+Theo hướng dẫn K5, Part 3 deploy **chính agent Part 6** (`06-lab-complete/`) chứ không deploy app mẫu trong `03-cloud-deployment/`.
+
+### Nền tảng chính: Render (Exercise 3.2)
+
+- **URL public:** https://ai-agent-rbry.onrender.com
+- **Cách deploy:** đẩy code lên GitHub (nhánh `lab/day14-work` của fork), Render Dashboard → New → **Blueprint** → chọn repo, branch và Blueprint path `06-lab-complete/render.yaml`. Render tạo hai tài nguyên: web service `ai-agent` (Docker, Free) và Key Value `agent-redis` (Redis, Free), `REDIS_URL` được nối tự động bằng `fromService`, `AGENT_API_KEY` do Render tự sinh (`generateValue: true`).
+- **Kiểm tra:** `GET /health` → 200, `GET /ready` → 200 (Redis nối được), `POST /ask` không key → 401, sai key → 401 (kết quả chi tiết trong [DEPLOYMENT.md](DEPLOYMENT.md)). `check_production_ready.py --public-url` xác nhận `/health` → 200.
+- **Screenshot:** xem `screenshots/dashboard.png`, `running.png`, `test.png`.
+- **Xem log:** Render Dashboard → service `ai-agent` → **Logs** (log là JSON một dòng nên dễ lọc).
+
+### Railway (Exercise 3.1): không dùng được, tài khoản hết trial
+
+Mình đã cài Railway CLI (`npm i -g @railway/cli`) và đăng nhập thành công, nhưng `railway init` trả về `Your trial has expired. Please select a plan to continue using Railway.` Mình không mua gói trả phí nên chọn Render làm nền tảng chính (RUBRIC cho phép Railway **hoặc** Render). Với nền tảng còn lại, mình so sánh hai file cấu hình (file `railway.toml` vẫn được viết đầy đủ và qua script chấm, nhưng chưa deploy thật).
+
+### So sánh `railway.toml` và `render.yaml`
+
+| Điểm | `railway.toml` | `render.yaml` |
+|------|----------------|---------------|
+| Phạm vi | Chỉ cấu hình **build + deploy của một service** | Mô tả cả **hạ tầng** (nhiều tài nguyên: web service + Key Value) trong một Blueprint |
+| Định dạng | TOML (`[build]`, `[deploy]`) | YAML (`services:` là danh sách) |
+| Build | `builder = "DOCKERFILE"`, `dockerfilePath` | `runtime: docker`, `dockerfilePath`, `dockerContext` |
+| Health check | `healthcheckPath = "/health"` | `healthCheckPath: /health` |
+| Restart | `restartPolicyType = "ON_FAILURE"` | Render tự restart khi health check fail |
+| Redis | **Không khai báo trong file**: thêm bằng CLI/dashboard (`railway add --database redis`) rồi trỏ `REDIS_URL` | **Khai báo trong cùng file** (`type: keyvalue`) và nối bằng `fromService` |
+| Biến môi trường / secret | **Không đặt trong file**: dùng `railway variables set ...` hoặc dashboard | Đặt ngay trong `envVars`; secret dùng `generateValue: true` hoặc `sync: false` để không lộ giá trị |
+| Cách deploy | `railway up` đẩy thẳng thư mục local, không cần GitHub | Đọc từ repo GitHub: push code rồi tạo Blueprint |
+
+Vì sao khác: Railway tách "cấu hình service" (file) khỏi "tài nguyên và biến" (CLI/dashboard), ưu tiên triển khai nhanh từ máy. Render theo hướng Infrastructure-as-Code: một file YAML mô tả toàn bộ stack nên dựng lại được tự động từ repo.
+
+### Exercise 3.3: Cloud Run CI/CD (chỉ đọc, không deploy)
+
+`cloudbuild.yaml` là pipeline Google Cloud Build chạy khi push lên `main`, gồm 4 bước tuần tự (`waitFor`): (1) **test**: cài dependency và chạy `pytest tests/` trong `python:3.11-slim`; (2) **build** image Docker, gắn hai tag `$COMMIT_SHA` và `latest`, dùng `--cache-from` để tận dụng layer cache; (3) **push** toàn bộ tag lên Container Registry (`gcr.io/$PROJECT_ID/ai-agent`); (4) **deploy** lên Cloud Run bằng `gcloud run deploy` (vùng `asia-southeast1`, `--min-instances=1` tránh cold start, `--max-instances=10`, 512Mi RAM, `OPENAI_API_KEY` lấy từ **Secret Manager** bằng `--set-secrets`). `service.yaml` là bản mô tả khai báo (Knative Service) của cùng dịch vụ: autoscaling 1 đến 10 instance, `containerConcurrency: 80`, giới hạn CPU/RAM, biến môi trường và secret qua `secretKeyRef`, `livenessProbe` gọi `/health` và `startupProbe` gọi `/ready`; có thể áp dụng bằng `gcloud run services replace service.yaml`.
+
+### Checkpoint 3 - tự kiểm tra
+
+- Có public URL hoạt động (Render).
+- Biến môi trường đặt trên nền tảng (`render.yaml` `envVars` / dashboard), không ghi trong code.
+- Xem log: Render → service → Logs.
 
 ---
 
@@ -470,3 +509,4 @@ Dòng log mẫu của agent (đều là JSON một dòng):
 | 3 | Đọc code Part 4 (API key, JWT, rate limiter, cost guard), chạy cả hai bản và vòng lặp curl | Giải thích Exercise 4.1-4.4, cách làm cost guard bằng Redis (chưa implement trong Part 4, để cho Part 6) | Output 401/403/200/429 lấy từ lệnh curl thật, token đã che; đối chiếu với số dòng trong code |
 | 4 | Đọc code Part 5, chạy health/ready, thử SIGTERM khi đang có request, dựng stack 3 instance + Nginx + Redis, chạy `test_stateless.py`, tắt thử 1 instance | Giải thích Exercise 5.1-5.5; mã mẫu đã có sẵn health/shutdown/Redis nên chỉ đọc và kiểm chứng, không viết lại | Các output (3 request vẫn 200 sau SIGTERM, 10 request chia round-robin qua 3 instance, session còn 10 message sau khi tắt instance) lấy từ lệnh thật trong WSL |
 | 5 | Viết code Part 6 (`config`, `redis_client`, `auth`, `rate_limiter` bằng Redis + Lua, `cost_guard`, `main`, `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `.env.example`, `railway.toml`, `render.yaml`) và chạy `check_production_ready.py` | Code Part 6 và bảng giải thích thiết kế ở trên; AI cũng chẩn đoán 3 sự cố môi trường (Python 3.14, Docker Desktop bị tắt, thứ tự `logging.warning`/`basicConfig`) | Chạy `--static-only` rồi bản đầy đủ tới `PASS 12/12`; tự chạy thêm `docker compose up` với curl thật (401/200/422/429/402, dừng Redis → 503, `docker stop` 1.0s); xác nhận `check_production_ready.py` không bị sửa (`git diff` rỗng). **Cần tự đọc và hiểu từng file trong `06-lab-complete/app/` trước khi nộp** (Lab Coach có thể hỏi) |
+| 6 | Cài Railway CLI, thử deploy; chuyển sang Render; kiểm tra URL public; viết `DEPLOYMENT.md` và mục Part 3 (so sánh `railway.toml`/`render.yaml`, pipeline Cloud Run) | Phát hiện Railway hết trial; hướng dẫn tạo Blueprint trên Render; bản nháp các tài liệu | Tự thao tác trên Render (tạo Blueprint, chọn branch `lab/day14-work`); mã HTTP `/health`, `/ready`, `/ask` 401 lấy từ `curl` thật vào URL public; `check_production_ready.py --public-url` |
